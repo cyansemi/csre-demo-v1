@@ -1,0 +1,16 @@
+#Testlist format:
+#Packet_Name Regex_Name Test_Name (optional: nocheck)
+
+simfiles/packet_art_short.txt    simfiles/regex_8_art.txt.supp         S1
+simfiles/packet_art_medium.txt   simfiles/regex_8_art.txt.supp         S2
+simfiles/packet_html.txt         simfiles/regex_8_html.txt.supp        S3
+simfiles/packet_html.txt         simfiles/regex_10_html.txt.supp       S4
+simfiles/packet_debug.txt        simfiles/regex_debug.txt.supp         S5
+simfiles/packet_clang.txt        simfiles/regex_8_typecover.txt.supp   S6
+simfiles/packet_unaligned.txt    simfiles/regex_8_nomatch.txt.supp     S7
+simfiles/packet_mixed.txt        simfiles/regex_8_typecover.txt.supp   S8
+simfiles/packet_word192.txt     simfiles/regex_8_typecover.txt.supp    S9
+simfiles/packet_bible.txt        simfiles/regex_8_bible.txt.supp       S10
+simfiles/packet_2048.txt         simfiles/regex_8_nomatch.txt.supp     S11
+simfiles/packet_hyshort.txt      simfiles/regex_hyshort.txt.supp       S12
+#simfiles/packet_2048.txt         simfiles/regex_8_easymatch.txt.supp   S13

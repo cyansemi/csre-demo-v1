@@ -1,0 +1,9 @@
+#Testlist format:
+#Packet_Name Regex_Name Test_Name (optional: nocheck)
+
+large/packet_1024B_248MB.txt           large/regex_simple_8.txt.supp  P1   nocheck
+large/packet_1024B_248MB_match_1.txt   large/regex_simple_8.txt.supp  P2   nocheck
+
+# Currently it will have bad_alloc error. Wait to enlarge to HBM[0:1]
+large/packet_1024B_489MB.txt           large/regex_simple_8.txt.supp   P3   nocheck
+#large/packet_1024B_958MB.txt           large/regex_simple_8.txt.supp   P4   nocheck

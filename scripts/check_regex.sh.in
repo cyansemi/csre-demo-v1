@@ -1,0 +1,29 @@
+#!/bin/bash
+
+if [ -z $1 ]; then
+    echo "Usage: $0 <regex_list>"
+    exit -1
+fi
+
+deploy_folder=$1
+regex_list=$2
+
+basename=`basename $regex_list`
+
+echo 
+echo "==================================================="
+echo "=     Call csre_regex_check on $basename "
+echo "==================================================="
+
+LD_LIBRARY_PATH=$deploy_folder $deploy_folder/csre_check_regex $regex_list @CSRE_MAX_TOKEN_NUM@ @CSRE_MAX_STATE_NUM@ @CSRE_MAX_CHAR_NUM@ @CSRE_MAX_CHAR_PER_TOKEN@ @CSRE_MAX_COUNT_NUM@ 2> $regex_list.msg
+
+if [ $? != 0 ]; then
+    echo "Some regex are not supported by hardware. See $regex_list.msg"
+    echo "For more details, please run the following command to reproduce the error for a single regular expression:";
+    echo "    cd <deploy_folder>"
+    echo "    ./csre_check_regex '<failed_regex>' @CSRE_MAX_TOKEN_NUM@ @CSRE_MAX_STATE_NUM@ @CSRE_MAX_CHAR_NUM@ @CSRE_MAX_CHAR_PER_TOKEN@ @CSRE_MAX_COUNT_NUM@"
+    exit -1
+fi
+
+echo "  Regular expression Pre-check PASSED.";
+exit 0

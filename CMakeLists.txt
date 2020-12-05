@@ -1,0 +1,98 @@
+cmake_minimum_required(VERSION 3.13)
+
+project(csre_demo)
+
+set(PROJ_ROOT    ${CMAKE_CURRENT_SOURCE_DIR})
+set(BUILD_DIR    ${CMAKE_CURRENT_BINARY_DIR})
+
+if(NOT CMAKE_BUILD_TYPE)
+    set(CMAKE_BUILD_TYPE Release)
+endif()
+
+set(CMAKE_CXX_FLAGS "-Wall -Wextra")
+set(CMAKE_CXX_FLAGS_DEBUG "-g")
+set(CMAKE_CXX_FLAGS_RELEASE "-O4")
+
+set(CMAKE_CXX_STANDARD 17)
+set(CMAKE_C_STANDARD 99)
+set(CMAKE_CXX_STANDARD_REQUIRED True)
+set(CMAKE_CXX_STANDARD_REQUIRED ON)
+#set(CMAKE_VERBOSE_MAKEFILE ON)
+
+# The supported platform
+if (NOT ${CMAKE_HOST_SYSTEM_PROCESSOR} MATCHES "x86_64")
+    message (FATAL_ERROR "Processor NOT Supported: ${CMAKE_HOST_SYSTEM_PROCESSOR}")
+endif()
+
+## Configurables
+set(KERNEL_NUM "2" CACHE STRING "Number of Kernels")
+set(XCL_PLATFORM "/opt/xilinx/platforms/xilinx_u50_gen3x16_xdma_201920_3/xilinx_u50_gen3x16_xdma_201920_3.xpfm" CACHE STRING "Platform type")
+set(KERNEL_FREQ "200" CACHE STRING "Kernel clock frequency (MHz)")
+set(XCL_TARGET "hw" CACHE STRING "Type of this project, hw - for building hardware; hwemu - for simulation") 
+set(CSRE_MAX_TOKEN_NUM "16" CACHE STRING "Maximum number of tokens in regex")
+set(CSRE_MAX_CHAR_PER_TOKEN "16" CACHE STRING "Maximum number of characters per token in regex")
+set(CSRE_MAX_STATE_NUM "16" CACHE STRING "Maximum number of states in regex")
+set(CSRE_MAX_CHAR_NUM "64" CACHE STRING "Maximum number of characters in regex")
+set(CSRE_MAX_COUNT_NUM "4" CACHE STRING "Maximum number of counters in regex")
+set(VIVADO_IMPL_STRATEGY "Performance_Explore" CACHE STRING "Choose Implemantaion Strategy")
+set(ILA_DEBUG_ENABLE "0" CACHE STRING "Enable/Disable adding ILA core for debugging")
+
+# Used to configure hardware only
+set(CSRE_RESULT_BURST_LENGTH "8" CACHE STRING "Result burst length when writing back")
+set(CSRE_NUM_PIPELINE "16" CACHE STRING "Num of PIPELINEs")
+set(CSRE_NUM_PU "8" CACHE STRING "Num of Pattern PUs")
+set(CSRE_NUM_PATTERN_REG_L1 "2" CACHE STRING "Level 1 buffer for Pattern")
+
+mark_as_advanced(KERNEL_NUM)
+mark_as_advanced(XCL_PLATFORM)
+mark_as_advanced(KERNEL_FREQ)
+mark_as_advanced(XCL_TARGET)
+mark_as_advanced(CSRE_MAX_TOKEN_NUM)
+mark_as_advanced(CSRE_MAX_CHAR_PER_TOKEN)
+mark_as_advanced(CSRE_MAX_STATE_NUM)
+mark_as_advanced(CSRE_MAX_CHAR_NUM)
+mark_as_advanced(CSRE_MAX_COUNT_NUM)
+mark_as_advanced(CSRE_RESULT_BURST_LENGTH)
+mark_as_advanced(CSRE_NUM_PIPELINE)
+mark_as_advanced(CSRE_NUM_PU)
+mark_as_advanced(CSRE_NUM_PATTERN_REG_L1)
+mark_as_advanced(VIVADO_IMPL_STRATEGY)
+mark_as_advanced(ILA_DEBUG_ENABLE)
+
+get_filename_component(XCL_XSA ${XCL_PLATFORM} NAME_WE CACHE)
+
+message("KERNEL_NUM               : ${KERNEL_NUM}")
+message("XCL_PLATFORM             : ${XCL_PLATFORM}")
+message("KERNEL_FREQ              : ${KERNEL_FREQ}")
+message("XCL_TARGET               : ${XCL_TARGET}")
+message("XCL_XSA                  : ${XCL_XSA}")
+message("CSRE_MAX_TOKEN_NUM       : ${CSRE_MAX_TOKEN_NUM}")
+message("CSRE_MAX_CHAR_PER_TOKEN  : ${CSRE_MAX_CHAR_PER_TOKEN}")
+message("CSRE_MAX_STATE_NUM       : ${CSRE_MAX_STATE_NUM}")
+message("CSRE_MAX_CHAR_NUM        : ${CSRE_MAX_CHAR_NUM}")
+message("CSRE_MAX_COUNT_NUM       : ${CSRE_MAX_COUNT_NUM}")
+# Hardware only
+message("CSRE_RESULT_BURST_LENGTH : ${CSRE_RESULT_BURST_LENGTH}")
+message("CSRE_NUM_PIPELINE        : ${CSRE_NUM_PIPELINE}")
+message("CSRE_NUM_PU              : ${CSRE_NUM_PU}")
+message("CSRE_NUM_PATTERN_REG_L1  : ${CSRE_NUM_PATTERN_REG_L1}")
+message("VIVADO_IMPL_STRATEGY     : ${VIVADO_IMPL_STRATEGY}")
+message("ILA_DEBUG_ENABLE         : ${ILA_DEBUG_ENABLE}")
+
+#if (NOT DEFINED ${INSTALL_DIR})
+#    set(INSTALL_DIR "${CMAKE_CURRENT_SOURCE_DIR}/build/${CMAKE_SYSTEM_NAME}/${CMAKE_BUILD_TYPE}")
+#endif()
+
+if (${XCL_TARGET} STREQUAL "hw_emu")
+    set(SIM_DIR ${BUILD_DIR}/sim)
+    file(MAKE_DIRECTORY ${SIM_DIR})
+    set(INSTALL_DIR ${SIM_DIR})
+else()
+    set(DEPLOY_DIR ${BUILD_DIR}/deploy)
+    file(MAKE_DIRECTORY ${DEPLOY_DIR})
+    set(INSTALL_DIR ${DEPLOY_DIR})
+endif()
+
+add_subdirectory(host)
+add_subdirectory(kernel)
+add_subdirectory(scripts)

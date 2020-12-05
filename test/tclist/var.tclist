@@ -1,0 +1,7 @@
+#Testlist format:
+#Packet_Name Regex_Name Test_Name (optional: nocheck)
+
+specific/packet_geek_school.txt                 specific/regex_hy_1000_modify.txt.supp   H1
+specific/packet_geek_school.txt                 specific/regex_snort_modify.txt.supp   H2
+specific/packet_now_samples.txt                 specific/regex_hy_1000_modify.txt.supp   H3
+specific/packet_now_samples.txt                 specific/regex_snort_modify.txt.supp   H4

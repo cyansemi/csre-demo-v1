@@ -1,0 +1,397 @@
+///////////////////////////////////////////////////////////////////////////////
+// Standard Kernel Top for Regular Expression String Match IP
+// This is the shim which wraps the core.
+///////////////////////////////////////////////////////////////////////////////
+
+`timescale 1ns/1ps
+
+
+module csre_kernel_wrapper # (
+    parameter ILA_DEBUG_ENABLE = @ILA_DEBUG_ENABLE@,
+
+    //Register version/date/names
+    parameter KERNEL_NAME_STR1 = 32'h7473_6574, //h'74657374 = "test"
+    parameter KERNEL_NAME_STR2 = 32'h2020_2020, //h'20 means 'space'
+    parameter KERNEL_NAME_STR3 = 32'h2020_2020,
+    parameter KERNEL_NAME_STR4 = 32'h2020_2020,
+    parameter KERNEL_NAME_STR5 = 32'h2020_2020,
+    parameter KERNEL_NAME_STR6 = 32'h2020_2020,
+    parameter KERNEL_NAME_STR7 = 32'h2020_2020,
+    parameter KERNEL_NAME_STR8 = 32'h2020_2020,
+
+
+    // RegEXP Core TOP
+    // Result
+    parameter C_RESULT_AXIS_DATA_WIDTH   = 64, //Result is organized in 8bytes data
+    parameter C_FIXED_BURST_LENGTH       = @CSRE_RESULT_BURST_LENGTH@,  //Burst Length when result is written back
+
+    //Packet pipelines
+    parameter C_PACKET_ID_WIDTH          = 32, //Packet uses 32bit ID numbering from 1 to 4G-1
+    parameter C_NUM_STRING_MATCH_PIPELINE= @CSRE_NUM_PIPELINE@, //How many PIPELINEs
+    parameter C_NUM_PIPELINE_IN_A_GROUP  = 1,  // This * next row should be equal to C_NUM_STRING_MATCH_PIPELINE
+    parameter C_NUM_OF_PIPELINE_GROUP    = @CSRE_NUM_PIPELINE@,
+    parameter C_PACKET_BUF_LEVEL2        = 1,
+    parameter C_PACKET_BUF_LEVEL3        = 2,
+
+    //Pattern PUs
+    parameter C_PATTERN_ID_WIDTH         = 32, //Pattern uses 32bit ID (however, only uses 16bits in result)
+    parameter C_PATTERN_UNIT_NUM         = @CSRE_NUM_PU@,  //How many PUs in a PIPELINE
+    parameter C_PATTERN_REG_LEVEL1       = @CSRE_NUM_PATTERN_REG_L1@,  //Shoule be less than PU NUM
+    parameter C_PATTERN_REG_LEVEL2       = 16, //Not used
+
+    //Pattern charateristics
+    parameter C_MAX_TOKEN_NUM            = @CSRE_MAX_TOKEN_NUM@,
+    parameter C_MAX_STATE_NUM            = @CSRE_MAX_STATE_NUM@,
+    parameter C_MAX_TOKEN_LEN            = @CSRE_MAX_CHAR_PER_TOKEN@,
+    parameter C_MAX_CHAR_NUM             = @CSRE_MAX_CHAR_NUM@, //the max length of a regex
+    parameter C_MAX_COUNT_NUM            = @CSRE_MAX_COUNT_NUM@,
+
+    // AXI_CONFIG_Slave
+    parameter C_S_AXI_CONFIG_DATA_WIDTH    = 32,
+    parameter C_S_AXI_CONFIG_ADDR_WIDTH    = 16, //limit to 64KB
+
+    // Pattern/Packet limit (adding 1 bit)
+    parameter C_PACKET_XFER_SIZE_WIDTH      = 33 + 1, //8GB max
+    parameter C_PATTERN_XFER_SIZE_WIDTH     = 23 + 1, //8MB max
+
+    // AXI_GMEM Master: to general memory (DDR or HBM or Host)
+    parameter C_M_AXI_GMEM_ID_WIDTH      = 1,
+    parameter C_M_AXI_GMEM_ADDR_WIDTH    = 64,
+    parameter C_M_AXI_GMEM_DATA_WIDTH    = 128,
+    parameter C_M_AXI_GMEM_AWUSER_WIDTH  = 1,
+    parameter C_M_AXI_GMEM_ARUSER_WIDTH  = 1,
+    parameter C_M_AXI_GMEM_WUSER_WIDTH   = 1,
+    parameter C_M_AXI_GMEM_RUSER_WIDTH   = 1,
+    parameter C_M_AXI_GMEM_BUSER_WIDTH   = 1
+)
+    (
+        input                                          ap_clk                ,
+        input                                          ap_resetn             ,
+
+
+        //---- AXI-MM interface to general mem: FPGA DDR/HBM or even Host(CAPI)
+        // AXI write address channel
+        output    [C_M_AXI_GMEM_ID_WIDTH - 1:0]         m_axi_gmem0_awid     ,
+        output    [C_M_AXI_GMEM_ADDR_WIDTH - 1:0]       m_axi_gmem0_awaddr   ,
+        output    [0007:0]                              m_axi_gmem0_awlen    ,
+        output    [0002:0]                              m_axi_gmem0_awsize   ,
+        output    [0001:0]                              m_axi_gmem0_awburst  ,
+        output    [0003:0]                              m_axi_gmem0_awcache  ,
+        output    [0001:0]                              m_axi_gmem0_awlock   ,
+        output    [0002:0]                              m_axi_gmem0_awprot   ,
+        output    [0003:0]                              m_axi_gmem0_awqos    ,
+        output    [0003:0]                              m_axi_gmem0_awregion ,
+        output    [C_M_AXI_GMEM_AWUSER_WIDTH - 1:0]     m_axi_gmem0_awuser   ,
+        output                                          m_axi_gmem0_awvalid  ,
+        input                                           m_axi_gmem0_awready  ,
+        // AXI write data channel
+        output    [C_M_AXI_GMEM_ID_WIDTH - 1:0]         m_axi_gmem0_wid      ,
+        output    [C_M_AXI_GMEM_DATA_WIDTH - 1:0]       m_axi_gmem0_wdata    ,
+        output    [(C_M_AXI_GMEM_DATA_WIDTH/8) -1:0]    m_axi_gmem0_wstrb    ,
+        output                                          m_axi_gmem0_wlast    ,
+        output                                          m_axi_gmem0_wvalid   ,
+        input                                           m_axi_gmem0_wready   ,
+        output    [C_M_AXI_GMEM_WUSER_WIDTH - 1:0]      m_axi_gmem0_wuser    ,
+        // AXI write response channel
+        output                                          m_axi_gmem0_bready   ,
+        input     [C_M_AXI_GMEM_ID_WIDTH - 1:0]         m_axi_gmem0_bid      ,
+        input     [0001:0]                              m_axi_gmem0_bresp    ,
+        input                                           m_axi_gmem0_bvalid   ,
+        input     [C_M_AXI_GMEM_BUSER_WIDTH - 1:0]      m_axi_gmem0_buser    ,
+        // AXI read address channel
+        output    [C_M_AXI_GMEM_ID_WIDTH - 1:0]         m_axi_gmem0_arid     ,
+        output    [C_M_AXI_GMEM_ADDR_WIDTH - 1:0]       m_axi_gmem0_araddr   ,
+        output    [0007:0]                              m_axi_gmem0_arlen    ,
+        output    [0002:0]                              m_axi_gmem0_arsize   ,
+        output    [0001:0]                              m_axi_gmem0_arburst  ,
+        output    [C_M_AXI_GMEM_ARUSER_WIDTH - 1:0]     m_axi_gmem0_aruser   ,
+        output    [0003:0]                              m_axi_gmem0_arcache  ,
+        output    [0001:0]                              m_axi_gmem0_arlock   ,
+        output    [0002:0]                              m_axi_gmem0_arprot   ,
+        output    [0003:0]                              m_axi_gmem0_arqos    ,
+        output    [0003:0]                              m_axi_gmem0_arregion ,
+        output                                          m_axi_gmem0_arvalid  ,
+        input                                           m_axi_gmem0_arready  ,
+        // AXI  ead data channel
+        output                                          m_axi_gmem0_rready   ,
+        input     [C_M_AXI_GMEM_ID_WIDTH - 1:0]         m_axi_gmem0_rid      ,
+        input     [C_M_AXI_GMEM_DATA_WIDTH - 1:0]       m_axi_gmem0_rdata    ,
+        input     [0001:0]                              m_axi_gmem0_rresp    ,
+        input                                           m_axi_gmem0_rlast    ,
+        input                                           m_axi_gmem0_rvalid   ,
+        input     [C_M_AXI_GMEM_RUSER_WIDTH - 1:0]      m_axi_gmem0_ruser    ,
+
+
+        //---- AXI-MM interface to general mem: FPGA DDR/HBM or even Host(CAPI)
+        // AXI write address channel
+        output    [C_M_AXI_GMEM_ID_WIDTH - 1:0]         m_axi_gmem1_awid     ,
+        output    [C_M_AXI_GMEM_ADDR_WIDTH - 1:0]       m_axi_gmem1_awaddr   ,
+        output    [0007:0]                              m_axi_gmem1_awlen    ,
+        output    [0002:0]                              m_axi_gmem1_awsize   ,
+        output    [0001:0]                              m_axi_gmem1_awburst  ,
+        output    [0003:0]                              m_axi_gmem1_awcache  ,
+        output    [0001:0]                              m_axi_gmem1_awlock   ,
+        output    [0002:0]                              m_axi_gmem1_awprot   ,
+        output    [0003:0]                              m_axi_gmem1_awqos    ,
+        output    [0003:0]                              m_axi_gmem1_awregion ,
+        output    [C_M_AXI_GMEM_AWUSER_WIDTH - 1:0]     m_axi_gmem1_awuser   ,
+        output                                          m_axi_gmem1_awvalid  ,
+        input                                           m_axi_gmem1_awready  ,
+        // AXI write data channel
+        output    [C_M_AXI_GMEM_ID_WIDTH - 1:0]         m_axi_gmem1_wid      ,
+        output    [C_M_AXI_GMEM_DATA_WIDTH - 1:0]       m_axi_gmem1_wdata    ,
+        output    [(C_M_AXI_GMEM_DATA_WIDTH/8) -1:0]    m_axi_gmem1_wstrb    ,
+        output                                          m_axi_gmem1_wlast    ,
+        output                                          m_axi_gmem1_wvalid   ,
+        input                                           m_axi_gmem1_wready   ,
+        output    [C_M_AXI_GMEM_WUSER_WIDTH - 1:0]      m_axi_gmem1_wuser    ,
+        // AXI write response channel
+        output                                          m_axi_gmem1_bready   ,
+        input     [C_M_AXI_GMEM_ID_WIDTH - 1:0]         m_axi_gmem1_bid      ,
+        input     [0001:0]                              m_axi_gmem1_bresp    ,
+        input                                           m_axi_gmem1_bvalid   ,
+        input     [C_M_AXI_GMEM_BUSER_WIDTH - 1:0]      m_axi_gmem1_buser    ,
+        // AXI read address channel
+        output    [C_M_AXI_GMEM_ID_WIDTH - 1:0]         m_axi_gmem1_arid     ,
+        output    [C_M_AXI_GMEM_ADDR_WIDTH - 1:0]       m_axi_gmem1_araddr   ,
+        output    [0007:0]                              m_axi_gmem1_arlen    ,
+        output    [0002:0]                              m_axi_gmem1_arsize   ,
+        output    [0001:0]                              m_axi_gmem1_arburst  ,
+        output    [C_M_AXI_GMEM_ARUSER_WIDTH - 1:0]     m_axi_gmem1_aruser   ,
+        output    [0003:0]                              m_axi_gmem1_arcache  ,
+        output    [0001:0]                              m_axi_gmem1_arlock   ,
+        output    [0002:0]                              m_axi_gmem1_arprot   ,
+        output    [0003:0]                              m_axi_gmem1_arqos    ,
+        output    [0003:0]                              m_axi_gmem1_arregion ,
+        output                                          m_axi_gmem1_arvalid  ,
+        input                                           m_axi_gmem1_arready  ,
+        // AXI read data channel
+        output                                          m_axi_gmem1_rready   ,
+        input     [C_M_AXI_GMEM_ID_WIDTH - 1:0]         m_axi_gmem1_rid      ,
+        input     [C_M_AXI_GMEM_DATA_WIDTH - 1:0]       m_axi_gmem1_rdata    ,
+        input     [0001:0]                              m_axi_gmem1_rresp    ,
+        input                                           m_axi_gmem1_rlast    ,
+        input                                           m_axi_gmem1_rvalid   ,
+        input     [C_M_AXI_GMEM_RUSER_WIDTH - 1:0]      m_axi_gmem1_ruser    ,
+
+
+        //---- AXI Lite bus to configure the registers ----
+        // AXI write address channel
+        output                                          s_axilite_cfg_awready  ,
+        input     [C_S_AXI_CONFIG_ADDR_WIDTH - 1:0]     s_axilite_cfg_awaddr   ,
+        input                                           s_axilite_cfg_awvalid  ,
+        // axi write data channel
+        output                                          s_axilite_cfg_wready   ,
+        input     [C_S_AXI_CONFIG_DATA_WIDTH - 1:0]     s_axilite_cfg_wdata    ,
+        input     [(C_S_AXI_CONFIG_DATA_WIDTH/8) -1:0]  s_axilite_cfg_wstrb    ,
+        input                                           s_axilite_cfg_wvalid   ,
+        // AXI response channel
+        output    [0001:0]                              s_axilite_cfg_bresp    ,
+        output                                          s_axilite_cfg_bvalid   ,
+        input                                           s_axilite_cfg_bready   ,
+        // AXI read address channel
+        output                                          s_axilite_cfg_arready  ,
+        input                                           s_axilite_cfg_arvalid  ,
+        input     [C_S_AXI_CONFIG_ADDR_WIDTH - 1:0]     s_axilite_cfg_araddr   ,
+        // AXI read data channel
+        output    [C_S_AXI_CONFIG_DATA_WIDTH - 1:0]     s_axilite_cfg_rdata    ,
+        output    [0001:0]                              s_axilite_cfg_rresp    ,
+        input                                           s_axilite_cfg_rready   ,
+        output                                          s_axilite_cfg_rvalid   ,
+
+
+        output                                          interrupt
+
+    );
+
+    kernel_regexp #(
+        .ILA_DEBUG_ENABLE (ILA_DEBUG_ENABLE),
+        //Register version/date/names
+        .KERNEL_NAME_STR1 (KERNEL_NAME_STR1), //h'74657374 = "test"
+        .KERNEL_NAME_STR2 (KERNEL_NAME_STR2), //h'20 means 'space'
+        .KERNEL_NAME_STR3 (KERNEL_NAME_STR3),
+        .KERNEL_NAME_STR4 (KERNEL_NAME_STR4),
+        .KERNEL_NAME_STR5 (KERNEL_NAME_STR5),
+        .KERNEL_NAME_STR6 (KERNEL_NAME_STR6),
+        .KERNEL_NAME_STR7 (KERNEL_NAME_STR7),
+        .KERNEL_NAME_STR8 (KERNEL_NAME_STR8),
+
+
+        // RegEXP Core TOP
+        .C_RESULT_AXIS_DATA_WIDTH   (C_RESULT_AXIS_DATA_WIDTH  ),
+        .C_PACKET_ID_WIDTH          (C_PACKET_ID_WIDTH         ),
+        .C_PACKET_BUF_LEVEL2        (C_PACKET_BUF_LEVEL2       ),
+        .C_PACKET_BUF_LEVEL3        (C_PACKET_BUF_LEVEL3       ),
+        .C_PATTERN_UNIT_NUM         (C_PATTERN_UNIT_NUM        ),
+        .C_PATTERN_ID_WIDTH         (C_PATTERN_ID_WIDTH        ),
+        .C_PATTERN_REG_LEVEL1       (C_PATTERN_REG_LEVEL1      ),
+        .C_PATTERN_REG_LEVEL2       (C_PATTERN_REG_LEVEL2      ),
+        .C_MAX_TOKEN_NUM            (C_MAX_TOKEN_NUM           ),
+        .C_MAX_STATE_NUM            (C_MAX_STATE_NUM           ),
+        .C_MAX_TOKEN_LEN            (C_MAX_TOKEN_LEN           ),
+        .C_MAX_CHAR_NUM             (C_MAX_CHAR_NUM            ),
+        .C_MAX_COUNT_NUM            (C_MAX_COUNT_NUM           ),
+        .C_NUM_STRING_MATCH_PIPELINE(C_NUM_STRING_MATCH_PIPELINE),
+        .C_NUM_PIPELINE_IN_A_GROUP  (C_NUM_PIPELINE_IN_A_GROUP ),
+        .C_NUM_OF_PIPELINE_GROUP    (C_NUM_OF_PIPELINE_GROUP   ),
+
+        // AXI_CONFIG_Slave
+        .C_S_AXI_CONFIG_DATA_WIDTH    (C_S_AXI_CONFIG_DATA_WIDTH   ),
+        .C_S_AXI_CONFIG_ADDR_WIDTH    (C_S_AXI_CONFIG_ADDR_WIDTH   ), //limit to 64KB
+        .C_FIXED_BURST_LENGTH         (C_FIXED_BURST_LENGTH        ),
+
+        // Pattern/Packet limit (adding 1 bit)
+        .C_PACKET_XFER_SIZE_WIDTH      (C_PACKET_XFER_SIZE_WIDTH     ), //8GB max
+        .C_PATTERN_XFER_SIZE_WIDTH     (C_PATTERN_XFER_SIZE_WIDTH    ), //8MB max
+
+        // AXI_GMEM Master: to general memory (DDR or HBM or Host)
+        .C_M_AXI_GMEM_ID_WIDTH      (C_M_AXI_GMEM_ID_WIDTH     ),
+        .C_M_AXI_GMEM_ADDR_WIDTH    (C_M_AXI_GMEM_ADDR_WIDTH   ),
+        .C_M_AXI_GMEM_DATA_WIDTH    (C_M_AXI_GMEM_DATA_WIDTH   ),
+        .C_M_AXI_GMEM_AWUSER_WIDTH  (C_M_AXI_GMEM_AWUSER_WIDTH ),
+        .C_M_AXI_GMEM_ARUSER_WIDTH  (C_M_AXI_GMEM_ARUSER_WIDTH ),
+        .C_M_AXI_GMEM_WUSER_WIDTH   (C_M_AXI_GMEM_WUSER_WIDTH  ),
+        .C_M_AXI_GMEM_RUSER_WIDTH   (C_M_AXI_GMEM_RUSER_WIDTH  ),
+        .C_M_AXI_GMEM_BUSER_WIDTH   (C_M_AXI_GMEM_BUSER_WIDTH  )
+    ) csre_inst_@CSRE_GIT_HEAD_HASH@ (
+        .ap_clk(ap_clk),
+        .ap_resetn(ap_resetn),
+
+
+        //---- AXI-MM interface to general mem: FPGA DDR/HBM or even Host(CAPI)
+        // AXI write address channel
+        .m_axi_gmem0_awid(m_axi_gmem0_awid),
+        .m_axi_gmem0_awaddr(m_axi_gmem0_awaddr),
+        .m_axi_gmem0_awlen(m_axi_gmem0_awlen),
+        .m_axi_gmem0_awsize(m_axi_gmem0_awsize),
+        .m_axi_gmem0_awburst(m_axi_gmem0_awburst),
+        .m_axi_gmem0_awcache(m_axi_gmem0_awcache),
+        .m_axi_gmem0_awlock(m_axi_gmem0_awlock),
+        .m_axi_gmem0_awprot(m_axi_gmem0_awprot),
+        .m_axi_gmem0_awqos(m_axi_gmem0_awqos),
+        .m_axi_gmem0_awregion(m_axi_gmem0_awregion),
+        .m_axi_gmem0_awuser(m_axi_gmem0_awuser),
+        .m_axi_gmem0_awvalid(m_axi_gmem0_awvalid),
+        .m_axi_gmem0_awready(m_axi_gmem0_awready),
+        // AXI write data channel
+        .m_axi_gmem0_wid(m_axi_gmem0_wid),
+        .m_axi_gmem0_wdata(m_axi_gmem0_wdata),
+        .m_axi_gmem0_wstrb(m_axi_gmem0_wstrb),
+        .m_axi_gmem0_wlast(m_axi_gmem0_wlast),
+        .m_axi_gmem0_wvalid(m_axi_gmem0_wvalid),
+        .m_axi_gmem0_wready(m_axi_gmem0_wready),
+        .m_axi_gmem0_wuser(m_axi_gmem0_wuser),
+        // AXI write response channel
+        .m_axi_gmem0_bready(m_axi_gmem0_bready),
+        .m_axi_gmem0_bid(m_axi_gmem0_bid),
+        .m_axi_gmem0_bresp(m_axi_gmem0_bresp),
+        .m_axi_gmem0_bvalid(m_axi_gmem0_bvalid),
+        .m_axi_gmem0_buser(m_axi_gmem0_buser),
+        // AXI read address channel
+        .m_axi_gmem0_arid(m_axi_gmem0_arid),
+        .m_axi_gmem0_araddr(m_axi_gmem0_araddr),
+        .m_axi_gmem0_arlen(m_axi_gmem0_arlen),
+        .m_axi_gmem0_arsize(m_axi_gmem0_arsize),
+        .m_axi_gmem0_arburst(m_axi_gmem0_arburst),
+        .m_axi_gmem0_aruser(m_axi_gmem0_aruser),
+        .m_axi_gmem0_arcache(m_axi_gmem0_arcache),
+        .m_axi_gmem0_arlock(m_axi_gmem0_arlock),
+        .m_axi_gmem0_arprot(m_axi_gmem0_arprot),
+        .m_axi_gmem0_arqos(m_axi_gmem0_arqos),
+        .m_axi_gmem0_arregion(m_axi_gmem0_arregion),
+        .m_axi_gmem0_arvalid(m_axi_gmem0_arvalid),
+        .m_axi_gmem0_arready(m_axi_gmem0_arready),
+        // AXI  ead data channel
+        .m_axi_gmem0_rready(m_axi_gmem0_rready),
+        .m_axi_gmem0_rid(m_axi_gmem0_rid),
+        .m_axi_gmem0_rdata(m_axi_gmem0_rdata),
+        .m_axi_gmem0_rresp(m_axi_gmem0_rresp),
+        .m_axi_gmem0_rlast(m_axi_gmem0_rlast),
+        .m_axi_gmem0_rvalid(m_axi_gmem0_rvalid),
+        .m_axi_gmem0_ruser(m_axi_gmem0_ruser),
+
+
+        //---- AXI-MM interface to general mem: FPGA DDR/HBM or even Host(CAPI)
+        // AXI write address channel
+        .m_axi_gmem1_awid(m_axi_gmem1_awid),
+        .m_axi_gmem1_awaddr(m_axi_gmem1_awaddr),
+        .m_axi_gmem1_awlen(m_axi_gmem1_awlen),
+        .m_axi_gmem1_awsize(m_axi_gmem1_awsize),
+        .m_axi_gmem1_awburst(m_axi_gmem1_awburst),
+        .m_axi_gmem1_awcache(m_axi_gmem1_awcache),
+        .m_axi_gmem1_awlock(m_axi_gmem1_awlock),
+        .m_axi_gmem1_awprot(m_axi_gmem1_awprot),
+        .m_axi_gmem1_awqos(m_axi_gmem1_awqos),
+        .m_axi_gmem1_awregion(m_axi_gmem1_awregion),
+        .m_axi_gmem1_awuser(m_axi_gmem1_awuser),
+        .m_axi_gmem1_awvalid(m_axi_gmem1_awvalid),
+        .m_axi_gmem1_awready(m_axi_gmem1_awready),
+        // AXI write data channel
+        .m_axi_gmem1_wid(m_axi_gmem1_wid),
+        .m_axi_gmem1_wdata(m_axi_gmem1_wdata),
+        .m_axi_gmem1_wstrb(m_axi_gmem1_wstrb),
+        .m_axi_gmem1_wlast(m_axi_gmem1_wlast),
+        .m_axi_gmem1_wvalid(m_axi_gmem1_wvalid),
+        .m_axi_gmem1_wready(m_axi_gmem1_wready),
+        .m_axi_gmem1_wuser(m_axi_gmem1_wuser),
+        // AXI write response channel
+        .m_axi_gmem1_bready(m_axi_gmem1_bready),
+        .m_axi_gmem1_bid(m_axi_gmem1_bid),
+        .m_axi_gmem1_bresp(m_axi_gmem1_bresp),
+        .m_axi_gmem1_bvalid(m_axi_gmem1_bvalid),
+        .m_axi_gmem1_buser(m_axi_gmem1_buser),
+        // AXI read address channel
+        .m_axi_gmem1_arid(m_axi_gmem1_arid),
+        .m_axi_gmem1_araddr(m_axi_gmem1_araddr),
+        .m_axi_gmem1_arlen(m_axi_gmem1_arlen),
+        .m_axi_gmem1_arsize(m_axi_gmem1_arsize),
+        .m_axi_gmem1_arburst(m_axi_gmem1_arburst),
+        .m_axi_gmem1_aruser(m_axi_gmem1_aruser),
+        .m_axi_gmem1_arcache(m_axi_gmem1_arcache),
+        .m_axi_gmem1_arlock(m_axi_gmem1_arlock),
+        .m_axi_gmem1_arprot(m_axi_gmem1_arprot),
+        .m_axi_gmem1_arqos(m_axi_gmem1_arqos),
+        .m_axi_gmem1_arregion(m_axi_gmem1_arregion),
+        .m_axi_gmem1_arvalid(m_axi_gmem1_arvalid),
+        .m_axi_gmem1_arready(m_axi_gmem1_arready),
+        // AXI read data channel
+        .m_axi_gmem1_rready(m_axi_gmem1_rready),
+        .m_axi_gmem1_rid(m_axi_gmem1_rid),
+        .m_axi_gmem1_rdata(m_axi_gmem1_rdata),
+        .m_axi_gmem1_rresp(m_axi_gmem1_rresp),
+        .m_axi_gmem1_rlast(m_axi_gmem1_rlast),
+        .m_axi_gmem1_rvalid(m_axi_gmem1_rvalid),
+        .m_axi_gmem1_ruser(m_axi_gmem1_ruser),
+
+
+        //---- AXI Lite bus to configure the registers ----
+        // AXI write address channel
+        .s_axilite_cfg_awready(s_axilite_cfg_awready),
+        .s_axilite_cfg_awaddr(s_axilite_cfg_awaddr),
+        .s_axilite_cfg_awvalid(s_axilite_cfg_awvalid),
+        // axi write data channel
+        .s_axilite_cfg_wready(s_axilite_cfg_wready),
+        .s_axilite_cfg_wdata(s_axilite_cfg_wdata),
+        .s_axilite_cfg_wstrb(s_axilite_cfg_wstrb),
+        .s_axilite_cfg_wvalid(s_axilite_cfg_wvalid),
+        // AXI response channel
+        .s_axilite_cfg_bresp(s_axilite_cfg_bresp),
+        .s_axilite_cfg_bvalid(s_axilite_cfg_bvalid),
+        .s_axilite_cfg_bready(s_axilite_cfg_bready),
+        // AXI read address channel
+        .s_axilite_cfg_arready(s_axilite_cfg_arready),
+        .s_axilite_cfg_arvalid(s_axilite_cfg_arvalid),
+        .s_axilite_cfg_araddr(s_axilite_cfg_araddr),
+        // AXI read data channel
+        .s_axilite_cfg_rdata(s_axilite_cfg_rdata),
+        .s_axilite_cfg_rresp(s_axilite_cfg_rresp),
+        .s_axilite_cfg_rready(s_axilite_cfg_rready),
+        .s_axilite_cfg_rvalid(s_axilite_cfg_rvalid),
+
+
+        .interrupt(interrupt)
+
+    );
+
+endmodule
+

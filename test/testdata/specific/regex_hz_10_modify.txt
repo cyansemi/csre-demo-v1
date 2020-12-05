@@ -1,0 +1,10 @@
+^.{5}\{"echo":\{"userNo".*}}$
+^\x70\x09.*\x49\x4d.\x49\x4d.\x49\x4d
+^\x00\x00\x00\x10.{16}\x00\x10\x00\x01\x00\xa1\xbe\xa4
+^ver#2#uid#\d*
+^..(\xff{4}\x01){2}
+^.{18}ptt\.net\.Ping.*ptt\.net\.Pong
+^(\x16\x03\x01|\x16\x03\x03|\x17\x03\x01).*(line\.naver\.jp|\.line-apps\.com)|^\x80\x02\x00.{5}\x00\x00\x00
+^POST\x20/blog/.*\&preferGateway=(((2[0-4]\d|25[0-5]|[01]?\d\d?)\.){3}(2[0-4]\d|25[0-5]|[01]?\d\d?))?\&excludeGateway=(((2[0-4]\d|25[0-5]|[01]?\d\d?)\.){3}(2[0-4]\d|25[0-5]|[01]?\d\d?))?\&location=.{0,10}\&secret=
+^(\x16\x03\x01|\x16\x03\x03|\x17\x03\x01).*(pop\.10086\.cn|mail\.10086\.cn|smtp\.10086\.cn|imap\.139\.com|stmp\.139\.com|pop\.139\.com|imap\.10086\.cn|wapmail\.10086\.cn|pop3\.139\.com|mail\.139\.com)
+^\x77\x6e\x73\x00.*\x00\x0f\x42\x45

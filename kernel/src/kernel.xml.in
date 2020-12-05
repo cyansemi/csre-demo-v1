@@ -1,0 +1,18 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<root versionMajor="1" versionMinor="5">
+  <kernel name="csre_@KERNEL_ID@" language="ip" vlnv="cyansemi.com:RTLKernel:csre_@KERNEL_ID@:1.0" attributes="" preferredWorkGroupSizeMultiple="0" workGroupSize="1" hwControlProtocol="ap_ctrl_hs">
+    <ports>
+      <port name="s_axilite_cfg" mode="slave" range="0xFFFF" dataWidth="32" portType="addressable" base="0x0"/>
+      <port name="m_axi_gmem0" mode="master" range="0xFFFFFFFFFFFFFFFF" dataWidth="128" portType="addressable" base="0x0"/>
+      <port name="m_axi_gmem1" mode="master" range="0xFFFFFFFFFFFFFFFF" dataWidth="128" portType="addressable" base="0x0"/>
+    </ports>
+    <args>
+      <arg name="packet"     addressQualifier="1"  id="0" port="m_axi_gmem0"   size="0x8" offset="0x010" type="char*"  hostOffset="0x0" hostSize="0x8"/> 
+      <arg name="regex"      addressQualifier="1"  id="1" port="m_axi_gmem1"   size="0x8" offset="0x018" type="char*"  hostOffset="0x0" hostSize="0x8"/> 
+      <arg name="state"      addressQualifier="1"  id="2" port="m_axi_gmem1"   size="0x8" offset="0x020" type="char*"  hostOffset="0x0" hostSize="0x8"/> 
+      <arg name="packet_num" addressQualifier="0"  id="3" port="s_axilite_cfg" size="0x8" offset="0x028" type="ulong"  hostOffset="0x0" hostSize="0x8"/> 
+      <arg name="regex_num"  addressQualifier="0"  id="4" port="s_axilite_cfg" size="0x4" offset="0x030" type="uint"   hostOffset="0x0" hostSize="0x4"/> 
+      <arg name="stat_size"  addressQualifier="0"  id="5" port="s_axilite_cfg" size="0x8" offset="0x034" type="ulong"  hostOffset="0x0" hostSize="0x8"/> 
+    </args>
+  </kernel>
+</root>

@@ -1,0 +1,5 @@
+#Testlist format:
+#Packet_Name Regex_Name Test_Name (optional: nocheck)
+
+quick/packet_small.txt                 quick/regex_simple_8.txt.supp   F1
+quick/packet_small_again.txt           quick/regex_simple_8.txt.supp   F2

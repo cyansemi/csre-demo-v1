@@ -1,0 +1,17 @@
+add_library(csre-comp SHARED ${CORE_SRC} ${RUNTIME_COMMON} ${REF_SRC})
+target_link_libraries(csre-comp PRIVATE recomp)
+set_property(TARGET csre-comp PROPERTY INTERFACE_POSITION_INDEPENDENT_CODE ON)
+target_include_directories(csre-comp PRIVATE ${PROJ_ROOT}/host/include)
+
+add_executable(csre-comp-example ./csre-comp-example.cpp)
+target_link_libraries(csre-comp-example csre-comp recomp)
+target_include_directories(csre-comp-example PRIVATE ${PROJ_ROOT}/host/include/api)
+target_include_directories(csre-comp-example PRIVATE ${PROJ_ROOT}/host/include/core)
+target_include_directories(csre-comp-example PRIVATE ${PROJ_ROOT}/host/include/)
+
+install(TARGETS csre-comp DESTINATION ${INSTALL_DIR}/csre-comp/lib)
+install(PROGRAMS ${CMAKE_CURRENT_BINARY_DIR}/csre-comp-example DESTINATION ${INSTALL_DIR}/csre-comp/)
+install(FILES ${PROJ_ROOT}/host/include/api/libcsre-comp.h DESTINATION ${INSTALL_DIR}/csre-comp/include)
+install(DIRECTORY ${PROJ_ROOT}/host/include/core DESTINATION ${INSTALL_DIR}/csre-comp/include)
+install(FILES ${PROJ_ROOT}/host/app/csre-comp-example/csre-comp-example.cpp DESTINATION ${INSTALL_DIR}/csre-comp/src)
+install(FILES ${PROJ_ROOT}/host/app/csre-comp-example/Makefile DESTINATION ${INSTALL_DIR}/csre-comp/)

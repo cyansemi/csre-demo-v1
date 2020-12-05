@@ -1,0 +1,10 @@
+add_executable(csre-mt ${CORE_SRC} ${REF_SRC} ${RUNTIME_COMMON} ./csre-mt.cpp)
+target_link_libraries(csre-mt recomp ${xrt_core_LIBRARY} uuid boost_system boost_chrono pthread)
+target_link_directories(csre-mt PRIVATE ${XILINX_XRT}/lib)
+target_include_directories(csre-mt PRIVATE ${PROJ_ROOT}/host/include)
+
+#if (${XCL_TARGET} STREQUAL "hw_emu")
+#    install(PROGRAMS ${CMAKE_CURRENT_BINARY_DIR}/csre-mt DESTINATION ${SIM_DIR})
+#else()
+#    install(PROGRAMS ${CMAKE_CURRENT_BINARY_DIR}/csre-mt DESTINATION ${DEPLOY_DIR})
+#endif()
